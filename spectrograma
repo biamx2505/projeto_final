@@ -1,0 +1,39 @@
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+
+Minim minim;
+AudioPlayer song;
+FFT fft;
+
+int xPos;
+
+void setup () {
+  size (1024, 512);
+  background (255);
+
+  minim = new Minim (this);
+  song = minim.loadFile("PaperTrails.mp3", 1024);
+  fft = new FFT (song.bufferSize(), song.sampleRate());
+
+  // calculate averages based on a miminum octave width of 22 Hz
+  // split each octave into three bands
+  // this should result in 30 averages
+
+  song.play();
+}
+
+void draw () {
+  spectrogram();
+  xPos++;
+  if (xPos > width) {
+    xPos = 0;
+  }
+}
+
+void spectrogram () {
+  fft.forward (song.mix);
+  for (int i = 0; i < fft.specSize(); i++) {
+    stroke (fft.getBand(i)*32);
+    point (xPos, i);
+  }
+}
