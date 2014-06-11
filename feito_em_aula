@@ -1,0 +1,103 @@
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+
+float rectW; //width do retangulo
+float rectH; //height do retangulo
+
+Minim minim;
+AudioPlayer song;
+FFT fftRight;
+FFT fftLeft;
+
+float [] frequenciasR;
+float [] frequenciasL;
+float maxRight, maxLeft;
+float p100R, p100L; //porcentagem 100% left e right
+float sumRight, sumLeft; //soma real
+float percentageR, percentageL; //porcentagem real
+
+void setup () {
+  size (1000, 500);
+  background (0);
+  
+  
+  //parametros do retangulo
+  rectW = width/20;
+  rectH = height/10;
+  
+  minim = new Minim (this);
+  song = minim.loadFile("03 - Für Hildegard von Bingen.mp3", 1024);
+  //song = minim.loadFile("13 - Derezzed.mp3", 1024);
+  fftLeft = new FFT (song.bufferSize(), song.sampleRate());
+  fftRight = new FFT (song.bufferSize(), song.sampleRate());
+  
+  song.play();
+  
+  frequenciasR = new float [fftRight.specSize()];
+  frequenciasL = new float [fftLeft.specSize()];
+}
+
+void draw () {
+  //desenha todos os retangulos
+  for (int i = 0; i < 20; i++) {
+    for (int j = 0; j < 10; j++) {
+     float xPos = rectW*i;
+     float yPos = rectH*j;
+     rect (xPos, yPos, rectW, rectH);
+    }
+  }
+  
+  FFTAnalise();
+}
+
+void FFTAnalise () {
+  /* analisa as a amplitude das frequencias a cada frame e
+   * pega a maior frequencia de cada buffer, calcula quanto
+   * seria se 100% das frequencias estivesse sendo utilizadas
+   * utilizando a maior frequencia como parametro e calcula
+   * quanto por cento das frequencias está realmente sendo 
+   * utilizada, essa porcentagem vai ser o quanto os quadradinhos
+   * serão pintados, right e left
+   */ 
+  
+  //reseta cada variável a cada iteração
+  maxRight = 0; maxLeft = 0;
+  p100R = 0; p100L = 0;
+  sumRight = 0; sumLeft = 0;
+  percentageR = 0; percentageL = 0;
+  
+  //calcula as amplitudes das frequencias de antemão
+  fftRight.forward(song.right);
+  fftLeft.forward(song.left);
+  
+  for (int i = 0; i < fftRight.specSize() - 1; i++) {
+    frequenciasR[i] = fftRight.getBand(i);
+    frequenciasL[i] = fftLeft.getBand(i);
+    
+    //soma todas as amplitudes de frequencias nesse pedaço do buffer
+    sumRight += frequenciasR[i];
+    sumLeft += frequenciasL[i];
+    
+    //encontra as maiores frequencias desse pedaço do buffer
+    if (frequenciasR[i] > maxRight) {
+      maxRight = frequenciasR[i];
+    }
+    if (frequenciasL[i] > maxLeft) {
+      maxLeft = frequenciasL[i];
+    }
+  }
+  
+  p100R = 513*maxRight;
+  p100L = 513*maxLeft;
+  
+  percentageR = 100*sumRight/p100R;
+  percentageL = 100*sumLeft/p100L;
+  
+  println (percentageR+", "+percentageL);
+}
+
+void stop () {
+  song.close();
+  minim.stop();
+  super.stop();
+}
