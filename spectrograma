@@ -1,39 +1,107 @@
 import ddf.minim.*;
 import ddf.minim.analysis.*;
 
+float rectW; //width do retangulo
+float rectH; //height do retangulo
+float [] alphaRight; //nivel de transparencia
+float [] alphaLeft;
+
 Minim minim;
 AudioPlayer song;
-FFT fft;
+FFT fftRight;
+FFT fftLeft;
 
-int xPos;
+int t;
 
 void setup () {
-  size (1024, 512);
-  background (255);
+  size (1200, 500);
+  noStroke();
+  //frameRate(30);
+
+  //parametros do retangulo
+  rectW = width/12;
+  rectH = height/5;
 
   minim = new Minim (this);
-  song = minim.loadFile("PaperTrails.mp3", 1024);
-  fft = new FFT (song.bufferSize(), song.sampleRate());
+  song = minim.loadFile("Bassnectar  Bass Head (Original Mix).mp3", 1024);
+  //song = minim.loadFile("01-arctic_monkeys-do_i_wanna_know.mp3", 1024);
+  fftLeft = new FFT (song.bufferSize(), song.sampleRate());
+  fftRight = new FFT (song.bufferSize(), song.sampleRate());
+
+  song.play();
 
   // calculate averages based on a miminum octave width of 22 Hz
   // split each octave into three bands
   // this should result in 30 averages
+  fftRight.logAverages(22, 3);
+  fftLeft.logAverages(22, 3);
 
-  song.play();
+  t = (fftRight.avgSize());
+  alphaRight = new float [t];
+  alphaLeft = new float [t];
+  println(t);
 }
 
 void draw () {
-  spectrogram();
-  xPos++;
-  if (xPos > width) {
-    xPos = 0;
+  /* o nível de transparênica de cada um dos quadrados
+   * é ditado por um average das amplitudes de cada banda
+   * de largura. tem o mesmo tanto de quadrados quanto de
+   * averages
+   */
+
+  fftRight.forward(song.right);
+  fftLeft.forward(song.left);
+
+  //matriz como vetor: linha*largura+coluna
+  for (int i = 0; i < 6; i++) {
+    for (int j = 0; j < 5; j++) {
+      if (fftLeft.getAvg(j*6 + i) < 1) {
+        alphaLeft[j*6 + i] = fftLeft.getAvg(j*6 + i)*50;
+        //o numero que multiplica foi escolhido
+        //na base do erro e acerto
+      } else {
+        alphaLeft[j*6 + i] = fftLeft.getAvg(j*6 + i);
+      }
+      if (fftRight.getAvg(j*6 + i) < 1) {
+        alphaRight[j*6 + i] = fftRight.getAvg(j*6 + i)*50;
+      } else {
+        alphaRight[j*6 + i] = fftRight.getAvg(j*6 + i);
+      }
+    }
+  }
+
+  //tira da ordem
+  for (int i = t - 1; i > 0; i--) {
+    int randL = int (random(i));
+    float tempL = alphaLeft[i];
+    alphaLeft[i] = alphaLeft[randL];
+    alphaLeft[randL] = tempL;
+    
+    int randR = int (random(i));
+    float tempR = alphaRight[i];
+    alphaRight[i] = alphaRight[randR];
+    alphaRight[randR] = tempR;
+  }
+
+  background (255);
+
+  //desenha todos os retangulos
+  for (int i = 0; i < 12; i++) {
+    for (int j = 0; j < 5; j++) {
+      if (i < 6) {
+        fill (0, 0, 255, alphaLeft[j*6 + i]);
+      } else {
+        fill (0, 0, 255, alphaRight[j*6 + i - 6]);
+      }
+      float xPos = rectW*i;
+      float yPos = rectH*j;
+      rect (xPos, yPos, rectW, rectH);
+    }
   }
 }
 
-void spectrogram () {
-  fft.forward (song.mix);
-  for (int i = 0; i < fft.specSize(); i++) {
-    stroke (fft.getBand(i)*32);
-    point (xPos, i);
-  }
+void stop () {
+  song.close();
+  minim.stop();
+  super.stop();
 }
