@@ -14,8 +14,6 @@ BeatDetect beat;
 
 int t;
 
-int loop;
-
 void setup () {
   size (1200, 500);
   noStroke();
@@ -24,9 +22,7 @@ void setup () {
   //parametros do retangulo
   rectW = width/12;
   rectH = height/5;
-
-  int loop = 0; //int suporte para contar o tanto de loops
-
+  
   minim = new Minim (this);
   //song = minim.loadFile("Bassnectar  Bass Head (Original Mix).mp3", 1024);
   //song = minim.loadFile("01-arctic_monkeys-do_i_wanna_know.mp3", 1024);
@@ -55,8 +51,6 @@ void setup () {
   alphaRight = new float [t];
   alphaLeft = new float [t];
   println(t);
-
-  randomSeed(0);
 }
 
 void draw () {
