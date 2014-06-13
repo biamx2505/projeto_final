@@ -1,0 +1,91 @@
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+
+float rectW; //width do retangulo
+float rectH; //height do retangulo
+float [] alpha; //nivel de transparencia
+
+Minim minim;
+AudioPlayer song;
+FFT fftRight;
+FFT fftLeft;
+
+void setup () {
+  size (1200, 500);
+  noStroke();
+  //frameRate();
+  
+  //parametros do retangulo
+  rectW = width/12;
+  rectH = height/5;
+
+  minim = new Minim (this);
+  //song = minim.loadFile("Bassnectar  Bass Head (Original Mix).mp3", 1024);
+  //song = minim.loadFile("01. Crazy in Love (feat. Jay-Z).mp3", 1024);
+  //song = minim.loadFile("1-01 Intro.mp3", 1024);
+  //song = minim.loadFile("05 Fistful of Silence.mp3", 1024);
+  song = minim.loadFile("01 - Gymnopédies, 1. Lent et douloureux.mp3", 1024);
+  fftLeft = new FFT (song.bufferSize(), song.sampleRate());
+  fftRight = new FFT (song.bufferSize(), song.sampleRate());
+
+  song.play();
+
+  // calculate averages based on a miminum octave width of 22 Hz
+  // split each octave into three bands
+  // this should result in 30 averages
+  fftRight.logAverages(22, 3);
+  fftLeft.logAverages(22, 3);
+
+  alpha = new float [(fftRight.avgSize())*2];
+  println(fftRight.avgSize()*2);
+}
+
+void draw () {
+  /*o nível de transparênica de cada um dos quadrados
+   *é ditado por um average das amplitudes de cada banda
+   *de largura. tem o mesmo tanto de quadrados quanto de
+   *averages
+   */
+ 
+  fftRight.forward(song.right);
+  fftLeft.forward(song.left);
+
+  //matriz como vetor: linha+largura*coluna
+  for (int i = 0; i < 12; i++) {
+    for (int j = 0; j < 5; j++) {
+      if (i < 6) {
+        if (fftLeft.getAvg(j*6 + i) < 1) {
+          alpha[j*12 + i] = fftLeft.getAvg(j*6 + i)*50;
+          //o numero que multiplica foi escolhido
+          //na base do erro e acerto
+        } else {
+          alpha[j*12 + i] = fftLeft.getAvg(j*6 + i);
+        }
+      } else {
+        if (fftRight.getAvg(j*6 + i/2) < 1) {
+          alpha[j*12 + i] = fftRight.getAvg(j*6 + i/2)*50;
+        } else {
+          alpha[j*12 + i] = fftRight.getAvg(j*6 + i/2);
+        }
+      }
+    }
+  }
+
+  background (255);
+
+  //desenha todos os retangulos
+  for (int i = 0; i < 12; i++) {
+    for (int j = 0; j < 5; j++) {
+      fill (0, 255, 0, alpha[j*12 + i]);
+      float xPos = rectW*i;
+      float yPos = rectH*j;
+      rect (xPos, yPos, rectW, rectH);
+    }
+  }
+}
+
+void stop () {
+  song.close();
+  minim.stop();
+  super.stop();
+}
