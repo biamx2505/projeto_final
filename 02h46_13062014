@@ -3,30 +3,45 @@ import ddf.minim.analysis.*;
 
 float rectW; //width do retangulo
 float rectH; //height do retangulo
-float [] alpha; //nivel de transparencia
+float [] alphaRight; //nivel de transparencia
+float [] alphaLeft;
 
 Minim minim;
 AudioPlayer song;
 FFT fftRight;
 FFT fftLeft;
+BeatDetect beat;
+
+int t;
+
+int loop;
 
 void setup () {
   size (1200, 500);
   noStroke();
-  //frameRate();
-  
+  //frameRate(30);
+
   //parametros do retangulo
   rectW = width/12;
   rectH = height/5;
 
+  int loop = 0; //int suporte para contar o tanto de loops
+
   minim = new Minim (this);
   //song = minim.loadFile("Bassnectar  Bass Head (Original Mix).mp3", 1024);
-  //song = minim.loadFile("01. Crazy in Love (feat. Jay-Z).mp3", 1024);
-  //song = minim.loadFile("1-01 Intro.mp3", 1024);
-  //song = minim.loadFile("05 Fistful of Silence.mp3", 1024);
-  song = minim.loadFile("01 - Gymnopédies, 1. Lent et douloureux.mp3", 1024);
+  //song = minim.loadFile("01-arctic_monkeys-do_i_wanna_know.mp3", 1024);
+  //song = minim.loadFile("02. Nu - MAN O TO.mp3", 1024);
+  //song = minim.loadFile("02-balkan_beat_box-hermetico.mp3", 1024);
+  //song = minim.loadFile("01 - Gymnopédies, 1. Lent et douloureux.mp3", 1024);
+  //song = minim.loadFile("05 Fancy (feat. Charli XCX).mp3", 1024);
+  //song = minim.loadFile("06. All Of The Lights.mp3", 1024);
+  //song = minim.loadFile("Eminem - White America.mp3", 1024);
+  //song = minim.loadFile("02 - M83 - Midnight City.mp3", 1024);
+  song = minim.loadFile("Sæglópur.mp3", 1024);
+  
   fftLeft = new FFT (song.bufferSize(), song.sampleRate());
   fftRight = new FFT (song.bufferSize(), song.sampleRate());
+  beat = new BeatDetect();
 
   song.play();
 
@@ -36,51 +51,74 @@ void setup () {
   fftRight.logAverages(22, 3);
   fftLeft.logAverages(22, 3);
 
-  alpha = new float [(fftRight.avgSize())*2];
-  println(fftRight.avgSize()*2);
+  t = (fftRight.avgSize());
+  alphaRight = new float [t];
+  alphaLeft = new float [t];
+  println(t);
+
+  randomSeed(0);
 }
 
 void draw () {
-  /*o nível de transparênica de cada um dos quadrados
-   *é ditado por um average das amplitudes de cada banda
-   *de largura. tem o mesmo tanto de quadrados quanto de
-   *averages
+  /* o nível de transparênica de cada um dos quadrados
+   * é ditado por um average das amplitudes de cada banda
+   * de largura. tem o mesmo tanto de quadrados quanto de
+   * averages
    */
- 
+
   fftRight.forward(song.right);
   fftLeft.forward(song.left);
 
-  //matriz como vetor: linha+largura*coluna
-  for (int i = 0; i < 12; i++) {
+  //matriz como vetor: linha*largura+coluna
+  for (int i = 0; i < 6; i++) {
     for (int j = 0; j < 5; j++) {
-      if (i < 6) {
-        if (fftLeft.getAvg(j*6 + i) < 1) {
-          alpha[j*12 + i] = fftLeft.getAvg(j*6 + i)*50;
-          //o numero que multiplica foi escolhido
-          //na base do erro e acerto
-        } else {
-          alpha[j*12 + i] = fftLeft.getAvg(j*6 + i);
-        }
+      if (fftLeft.getAvg(j*6 + i) < 1) {
+        alphaLeft[j*6 + i] = fftLeft.getAvg(j*6 + i)*50;
+        //o numero que multiplica foi escolhido
+        //na base do erro e acerto
       } else {
-        if (fftRight.getAvg(j*6 + i/2) < 1) {
-          alpha[j*12 + i] = fftRight.getAvg(j*6 + i/2)*50;
-        } else {
-          alpha[j*12 + i] = fftRight.getAvg(j*6 + i/2);
-        }
+        alphaLeft[j*6 + i] = fftLeft.getAvg(j*6 + i);
+      }
+      if (fftRight.getAvg(j*6 + i) < 1) {
+        alphaRight[j*6 + i] = fftRight.getAvg(j*6 + i)*50;
+      } else {
+        alphaRight[j*6 + i] = fftRight.getAvg(j*6 + i);
       }
     }
   }
+
+  //tira da ordem
+  /*for (int i = t - 1; i > 0; i--) {
+   int randL = int (random(i));
+   float tempL = alphaLeft[i];
+   alphaLeft[i] = alphaLeft[randL];
+   alphaLeft[randL] = tempL;
+   
+   int randR = int (random(i));
+   float tempR = alphaRight[i];
+   alphaRight[i] = alphaRight[randR];
+   alphaRight[randR] = tempR;
+   }*/
 
   background (255);
 
   //desenha todos os retangulos
   for (int i = 0; i < 12; i++) {
     for (int j = 0; j < 5; j++) {
-      fill (0, 255, 0, alpha[j*12 + i]);
+      if (i < 6) {
+        fill (255, 0, 0, alphaLeft[j*6 + i]);
+      } else {
+        fill (255, 0, 0, alphaRight[j*6 + i - 6]);
+      }
       float xPos = rectW*i;
       float yPos = rectH*j;
       rect (xPos, yPos, rectW, rectH);
     }
+  }
+
+  beat.detect(song.mix);
+  if (beat.isOnset()) {
+    filter(INVERT);
   }
 }
 
